@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WHAT THE FUME — Fume Cursor Demo</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{font-family:"SUIT","Noto Sans KR",system-ui,-apple-system,sans-serif;}
+  section{
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    padding:6vw;
+  }
+  .field-white{background:#ffffff;color:#7c1836;}
+  .field-wine {background:#7c1836;color:#ffffff;}
+  .field-black{background:#000000;color:#ffffff;}
+  .kicker{
+    font-size:12px;letter-spacing:.35em;text-transform:uppercase;
+    opacity:.7;margin-bottom:22px;font-weight:700;
+  }
+  h1{
+    font-size:clamp(42px,9vw,132px);
+    line-height:.95;letter-spacing:.02em;text-transform:uppercase;font-weight:800;
+  }
+  .quote{font-size:clamp(60px,14vw,180px);line-height:0.7;opacity:.85;}
+  p.desc{margin-top:26px;max-width:520px;font-size:15px;line-height:1.9;opacity:.75;}
+  .hint{
+    position:fixed;left:50%;bottom:22px;transform:translateX(-50%);
+    z-index:10000;font-size:12px;letter-spacing:.15em;color:rgba(124,24,54,.65);
+    background:rgba(255,255,255,.6);padding:8px 16px;border-radius:999px;
+    backdrop-filter:blur(4px);pointer-events:none;
+  }
+  @media (hover:none),(pointer:coarse){ .hint::after{content:" — 이 효과는 PC(마우스)에서만 보입니다";} }
+</style>
+</head>
+<body>
+
+  <section class="field-white">
+    <div class="kicker">MOVE YOUR CURSOR</div>
+    <div class="quote">&rdquo;</div>
+    <h1>What the Fume</h1>
+    <p class="desc">커서를 움직여 보세요. 와인빛 향(fume)이 커서를 따라 부드럽게 피어올랐다 사라집니다. 흰 배경에서는 은은한 로즈빛 연무로 보입니다.</p>
+  </section>
+
+  <section class="field-wine">
+    <div class="kicker">SCENE 02</div>
+    <h1>Precise<br>Situations</h1>
+    <p class="desc">와인 배경 위에서는 진주빛 코어가 향의 결을 드러냅니다. 어느 배경에서도 절제된 톤을 유지하도록 설계했습니다.</p>
+  </section>
+
+  <section class="field-black">
+    <div class="kicker">SCENE 03</div>
+    <h1>Not Good<br>Smells</h1>
+    <p class="desc">검은 배경에서는 옅은 연무가 가장 선명하게 피어오릅니다. 200ms 기반의 느린 모션 언어를 그대로 따릅니다.</p>
+  </section>
+
+  <div class="hint">커서를 움직여 보세요</div>
+
+<!-- ===== 아래가 cafe24에 붙여넣을 실제 이펙트 코드입니다 (snippet.html 과 동일) ===== -->
+<style>
+  #wtf-fume-canvas{position:fixed;inset:0;width:100vw;height:100vh;pointer-events:none;z-index:9998;}
+  @media (hover:none),(pointer:coarse){#wtf-fume-canvas{display:none !important;}}
+</style>
+<canvas id="wtf-fume-canvas" aria-hidden="true"></canvas>
+<script>
+(function(){
+  "use strict";
+  var mq = window.matchMedia;
+  var finePointer = mq && mq('(pointer:fine)').matches;
+  var reduceMotion = mq && mq('(prefers-reduced-motion: reduce)').matches;
+  var canvas = document.getElementById('wtf-fume-canvas');
+  if(!canvas || !finePointer || reduceMotion){ if(canvas){canvas.style.display='none';} return; }
+  var ctx = canvas.getContext('2d');
+  var dpr = Math.min(window.devicePixelRatio || 1, 2);
+  var W=0,H=0;
+  function resize(){
+    W=canvas.width=Math.floor(window.innerWidth*dpr);
+    H=canvas.height=Math.floor(window.innerHeight*dpr);
+    canvas.style.width=window.innerWidth+'px';
+    canvas.style.height=window.innerHeight+'px';
+  }
+  resize(); window.addEventListener('resize',resize,{passive:true});
+  var particles=[], MAX=120;
+  var mouse={x:-999,y:-999,active:false};
+  var lastX=-999,lastY=-999;
+  var lead={x:window.innerWidth/2,y:window.innerHeight/2};
+  window.addEventListener('mousemove',function(e){mouse.x=e.clientX;mouse.y=e.clientY;mouse.active=true;},{passive:true});
+  document.addEventListener('mouseleave',function(){mouse.active=false;});
+  function spawn(x,y,count){
+    for(var i=0;i<count;i++){
+      if(particles.length>=MAX) particles.shift();
+      particles.push({
+        x:(x+(Math.random()-0.5)*14)*dpr, y:(y+(Math.random()-0.5)*14)*dpr,
+        vx:(Math.random()-0.5)*0.25*dpr, vy:(-0.25-Math.random()*0.45)*dpr,
+        r:(9+Math.random()*16)*dpr, grow:(0.05+Math.random()*0.06)*dpr,
+        life:0, ttl:1100+Math.random()*900, peak:0.11+Math.random()*0.06
+      });
+    }
+  }
+  var last=0, ambient=0;
+  function loop(t){
+    if(!last) last=t;
+    var dt=Math.min(t-last,48); last=t;
+    lead.x+=(mouse.x-lead.x)*0.14; lead.y+=(mouse.y-lead.y)*0.14;
+    if(mouse.active){
+      var dx=mouse.x-lastX, dy=mouse.y-lastY;
+      var speed=Math.sqrt(dx*dx+dy*dy);
+      if(lastX>-900 && speed>1.5){ spawn(mouse.x,mouse.y,Math.min(2,1+(speed>60?1:0))); }
+      ambient+=dt; if(ambient>220){ambient=0;spawn(mouse.x,mouse.y,1);}
+      lastX=mouse.x; lastY=mouse.y;
+    }
+    ctx.clearRect(0,0,W,H);
+    for(var i=particles.length-1;i>=0;i--){
+      var p=particles[i]; p.life+=dt;
+      if(p.life>=p.ttl){particles.splice(i,1);continue;}
+      var k=p.life/p.ttl;
+      p.x+=p.vx; p.y+=p.vy; p.vy*=0.997; p.r+=p.grow;
+      var a=Math.sin(Math.PI*k)*p.peak; if(a<=0) continue;
+      var g=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,p.r);
+      g.addColorStop(0.0,'rgba(245,235,238,'+(a*0.55).toFixed(3)+')');
+      g.addColorStop(0.45,'rgba(124,24,54,'+a.toFixed(3)+')');
+      g.addColorStop(1.0,'rgba(124,24,54,0)');
+      ctx.fillStyle=g; ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fill();
+    }
+    if(mouse.active){
+      ctx.beginPath(); ctx.arc(lead.x*dpr,lead.y*dpr,2.2*dpr,0,Math.PI*2);
+      ctx.fillStyle='rgba(124,24,54,0.5)'; ctx.fill();
+    }
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

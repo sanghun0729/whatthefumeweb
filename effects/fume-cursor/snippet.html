@@ -1,0 +1,140 @@
+<!-- ============================================================
+     WHAT THE FUME — Fume Cursor Trail (PC only)
+     커서를 따라 와인빛 향(fume)이 피어올랐다 사라지는 이펙트.
+     cafe24 스마트디자인 편집기에서 </body> 바로 위에 붙여넣으세요.
+     - PC(마우스 사용) 환경에서만 동작 (모바일/터치 자동 비활성)
+     - prefers-reduced-motion 사용자에겐 자동 비활성 (접근성)
+     - pointer-events:none 이라 클릭/스크롤을 방해하지 않음
+     Brand palette: wine #7c1836 / white #ffffff / black #000000
+     ============================================================ -->
+<style>
+  #wtf-fume-canvas{
+    position:fixed;
+    inset:0;
+    width:100vw;
+    height:100vh;
+    pointer-events:none;   /* 클릭/드래그 방해 안 함 */
+    z-index:9998;          /* 필요시 테마 레이어에 맞게 조정 */
+  }
+  /* 터치 기기에서는 렌더링 자체를 숨김 */
+  @media (hover:none),(pointer:coarse){
+    #wtf-fume-canvas{display:none !important;}
+  }
+</style>
+
+<canvas id="wtf-fume-canvas" aria-hidden="true"></canvas>
+
+<script>
+(function(){
+  "use strict";
+  var mq = window.matchMedia;
+  var finePointer = mq && mq('(pointer:fine)').matches;          // 정밀 포인터(마우스)
+  var reduceMotion = mq && mq('(prefers-reduced-motion: reduce)').matches;
+  var canvas = document.getElementById('wtf-fume-canvas');
+  if(!canvas || !finePointer || reduceMotion){
+    if(canvas){ canvas.style.display = 'none'; }
+    return; // PC 마우스 환경이 아니면 종료
+  }
+
+  var ctx = canvas.getContext('2d');
+  var dpr = Math.min(window.devicePixelRatio || 1, 2);
+  var W = 0, H = 0;
+
+  function resize(){
+    W = canvas.width  = Math.floor(window.innerWidth  * dpr);
+    H = canvas.height = Math.floor(window.innerHeight * dpr);
+    canvas.style.width  = window.innerWidth  + 'px';
+    canvas.style.height = window.innerHeight + 'px';
+  }
+  resize();
+  window.addEventListener('resize', resize, {passive:true});
+
+  var particles = [];
+  var MAX = 120;                         // 파티클 상한 (성능 보호)
+  var mouse = { x:-999, y:-999, active:false };
+  var lastX = -999, lastY = -999;
+  var lead  = { x: window.innerWidth/2, y: window.innerHeight/2 }; // 커서를 살짝 늦게 따라오는 '향의 근원'
+
+  window.addEventListener('mousemove', function(e){
+    mouse.x = e.clientX; mouse.y = e.clientY; mouse.active = true;
+  }, {passive:true});
+  document.addEventListener('mouseleave', function(){ mouse.active = false; });
+
+  // 향 한 조각 생성 (부드럽게 위로 피어오름)
+  function spawn(x, y, count){
+    for(var i=0;i<count;i++){
+      if(particles.length >= MAX) particles.shift();
+      particles.push({
+        x:(x + (Math.random()-0.5)*14) * dpr,
+        y:(y + (Math.random()-0.5)*14) * dpr,
+        vx:(Math.random()-0.5) * 0.25 * dpr,
+        vy:(-0.25 - Math.random()*0.45) * dpr,   // 위로 상승
+        r:(9 + Math.random()*16) * dpr,
+        grow:(0.05 + Math.random()*0.06) * dpr,
+        life:0,
+        ttl:1100 + Math.random()*900,
+        peak:0.11 + Math.random()*0.06          // 최대 불투명도(절제)
+      });
+    }
+  }
+
+  var last = 0;
+  var ambient = 0;
+  function loop(t){
+    if(!last) last = t;
+    var dt = Math.min(t - last, 48); last = t;
+
+    // '향의 근원' 점이 커서를 부드럽게(느리게) 따라옴
+    lead.x += (mouse.x - lead.x) * 0.14;
+    lead.y += (mouse.y - lead.y) * 0.14;
+
+    if(mouse.active){
+      var dx = mouse.x - lastX, dy = mouse.y - lastY;
+      var speed = Math.sqrt(dx*dx + dy*dy);
+      if(lastX > -900 && speed > 1.5){
+        spawn(mouse.x, mouse.y, Math.min(2, 1 + (speed>60?1:0)));
+      }
+      // 커서가 멈춰 있어도 아주 옅게 향이 피어오름
+      ambient += dt;
+      if(ambient > 220){ ambient = 0; spawn(mouse.x, mouse.y, 1); }
+      lastX = mouse.x; lastY = mouse.y;
+    }
+
+    ctx.clearRect(0,0,W,H);
+
+    for(var i=particles.length-1;i>=0;i--){
+      var p = particles[i];
+      p.life += dt;
+      if(p.life >= p.ttl){ particles.splice(i,1); continue; }
+      var k = p.life / p.ttl;                 // 0 -> 1
+      p.x += p.vx; p.y += p.vy;
+      p.vy *= 0.997;                          // 서서히 상승 감속
+      p.r += p.grow;                          // 서서히 확산
+      // 페이드 인/아웃 (부드럽게 나타났다 사라짐)
+      var a = Math.sin(Math.PI * k) * p.peak;
+      if(a <= 0) continue;
+
+      var g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r);
+      g.addColorStop(0.0, 'rgba(245,235,238,'+(a*0.55).toFixed(3)+')'); // 옅은 진주빛 코어
+      g.addColorStop(0.45,'rgba(124,24,54,'+ a.toFixed(3) +')');        // 와인 바디
+      g.addColorStop(1.0, 'rgba(124,24,54,0)');                         // 가장자리 소멸
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+      ctx.fill();
+    }
+
+    // 커서를 늦게 따라오는 작은 와인 코어 (향의 근원)
+    if(mouse.active){
+      ctx.beginPath();
+      ctx.arc(lead.x*dpr, lead.y*dpr, 2.2*dpr, 0, Math.PI*2);
+      ctx.fillStyle = 'rgba(124,24,54,0.5)';
+      ctx.fill();
+    }
+
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+})();
+</script>
+<!-- ================= /WHAT THE FUME — Fume Cursor Trail ================= -->
