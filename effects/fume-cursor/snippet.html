@@ -69,11 +69,11 @@
         y:(y + (Math.random()-0.5)*14) * dpr,
         vx:(Math.random()-0.5) * 0.25 * dpr,
         vy:(-0.25 - Math.random()*0.45) * dpr,   // 위로 상승
-        r:(9 + Math.random()*16) * dpr,
-        grow:(0.05 + Math.random()*0.06) * dpr,
+        r:(12 + Math.random()*20) * dpr,
+        grow:(0.06 + Math.random()*0.07) * dpr,
         life:0,
-        ttl:1100 + Math.random()*900,
-        peak:0.11 + Math.random()*0.06          // 최대 불투명도(절제)
+        ttl:1200 + Math.random()*1000,
+        peak:0.10 + Math.random()*0.05          // 최대 불투명도(절제)
       });
     }
   }
@@ -115,9 +115,9 @@
       if(a <= 0) continue;
 
       var g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r);
-      g.addColorStop(0.0, 'rgba(245,235,238,'+(a*0.55).toFixed(3)+')'); // 옅은 진주빛 코어
-      g.addColorStop(0.45,'rgba(124,24,54,'+ a.toFixed(3) +')');        // 와인 바디
-      g.addColorStop(1.0, 'rgba(124,24,54,0)');                         // 가장자리 소멸
+      g.addColorStop(0.0, 'rgba(150,46,82,'+ a.toFixed(3) +')');        // 향의 중심(가장 진함)
+      g.addColorStop(0.45,'rgba(124,24,54,'+(a*0.5).toFixed(3)+')');    // 부드럽게 확산(단조 감소)
+      g.addColorStop(1.0, 'rgba(124,24,54,0)');                         // 가장자리 소멸 → 연기 질감
       ctx.fillStyle = g;
       ctx.beginPath();
       ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);

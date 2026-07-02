@@ -97,8 +97,8 @@
       particles.push({
         x:(x+(Math.random()-0.5)*14)*dpr, y:(y+(Math.random()-0.5)*14)*dpr,
         vx:(Math.random()-0.5)*0.25*dpr, vy:(-0.25-Math.random()*0.45)*dpr,
-        r:(9+Math.random()*16)*dpr, grow:(0.05+Math.random()*0.06)*dpr,
-        life:0, ttl:1100+Math.random()*900, peak:0.11+Math.random()*0.06
+        r:(12+Math.random()*20)*dpr, grow:(0.06+Math.random()*0.07)*dpr,
+        life:0, ttl:1200+Math.random()*1000, peak:0.10+Math.random()*0.05
       });
     }
   }
@@ -122,8 +122,8 @@
       p.x+=p.vx; p.y+=p.vy; p.vy*=0.997; p.r+=p.grow;
       var a=Math.sin(Math.PI*k)*p.peak; if(a<=0) continue;
       var g=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,p.r);
-      g.addColorStop(0.0,'rgba(245,235,238,'+(a*0.55).toFixed(3)+')');
-      g.addColorStop(0.45,'rgba(124,24,54,'+a.toFixed(3)+')');
+      g.addColorStop(0.0,'rgba(150,46,82,'+a.toFixed(3)+')');
+      g.addColorStop(0.45,'rgba(124,24,54,'+(a*0.5).toFixed(3)+')');
       g.addColorStop(1.0,'rgba(124,24,54,0)');
       ctx.fillStyle=g; ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fill();
     }
